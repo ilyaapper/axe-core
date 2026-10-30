@@ -251,4 +251,162 @@ describe('page-no-duplicate', () => {
       );
     });
   });
+
+  describe('nested documents and applications', () => {
+    ['document', 'application'].forEach(scopeRole => {
+      ['main', 'banner', 'contentinfo'].forEach(role => {
+        it(`allows a separate ${role} in a ${scopeRole}`, () => {
+          const params = checkSetup(
+            `
+            <div role="${role}" id="target"></div>
+            <div role="${scopeRole}"><div role="${role}"></div></div>
+          `,
+            { selector: `[role="${role}"]`, role }
+          );
+          assert.isTrue(check.evaluate.apply(checkContext, params));
+          assert.lengthOf(checkContext._relatedNodes, 0);
+        });
+
+        it(`reports duplicate ${role} landmarks only within their ${scopeRole}`, () => {
+          const params = checkSetup(
+            `
+            <div role="${role}"></div>
+            <div role="${scopeRole}">
+              <div role="${role}" id="target"></div>
+              <div role="${role}" id="duplicate"></div>
+            </div>
+          `,
+            { selector: `[role="${role}"]`, role }
+          );
+          assert.isFalse(check.evaluate.apply(checkContext, params));
+          assert.deepEqual(
+            checkContext._relatedNodes.map(elm => elm.id),
+            ['duplicate']
+          );
+        });
+      });
+    });
+
+    it('evaluates each scope once, including nested scopes', () => {
+      const params = checkSetup(
+        `
+        <main id="target">
+          <div role="application">
+            <main id="app-main"></main>
+            <main id="app-duplicate"></main>
+            <div role="document"><main id="doc-main"></main></div>
+          </div>
+        </main>
+      `,
+        { selector: 'main' }
+      );
+      assert.isTrue(check.evaluate.apply(checkContext, params));
+      const evaluate = id => {
+        checkContext.reset();
+        const node = fixture.querySelector(`#${id}`);
+        return check.evaluate.call(
+          checkContext,
+          node,
+          params[1],
+          axe.utils.getNodeFromTree(node)
+        );
+      };
+      assert.isFalse(evaluate('app-main'));
+      assert.deepEqual(
+        checkContext._relatedNodes.map(elm => elm.id),
+        ['app-duplicate']
+      );
+      assert.isUndefined(evaluate('app-duplicate'));
+      assert.equal(checkContext._data, 'ignored');
+      assert.isTrue(evaluate('doc-main'));
+      assert.lengthOf(checkContext._relatedNodes, 0);
+      assert.isUndefined(evaluate('target'));
+      assert.equal(checkContext._data, 'ignored');
+    });
+
+    it('filters landmark roles independently across sibling scopes', () => {
+      const params = checkSetup(
+        `
+        <main id="target"></main>
+        <div role="application">
+          <main id="app-main"></main>
+          <div role="banner"></div>
+        </div>
+        <div role="document">
+          <main id="doc-main"></main>
+          <main id="doc-duplicate"></main>
+        </div>
+        <div role="document"><main id="other-doc-main"></main></div>
+      `,
+        { selector: 'main, [role]', role: 'main' }
+      );
+      assert.isTrue(check.evaluate.apply(checkContext, params));
+      const evaluate = id => {
+        checkContext.reset();
+        const node = fixture.querySelector(`#${id}`);
+        return check.evaluate.call(
+          checkContext,
+          node,
+          params[1],
+          axe.utils.getNodeFromTree(node)
+        );
+      };
+      assert.isTrue(evaluate('app-main'));
+      assert.lengthOf(checkContext._relatedNodes, 0);
+      assert.isFalse(evaluate('doc-main'));
+      assert.deepEqual(
+        checkContext._relatedNodes.map(elm => elm.id),
+        ['doc-duplicate']
+      );
+      assert.isTrue(evaluate('other-doc-main'));
+      assert.lengthOf(checkContext._relatedNodes, 0);
+    });
+
+    it('keeps duplicate landmarks outside a nested document in the same scope', () => {
+      const params = checkSetup(
+        `
+        <main id="target"></main>
+        <div role="document"><main></main></div>
+        <main id="duplicate"></main>
+      `,
+        { selector: 'main' }
+      );
+      assert.isFalse(check.evaluate.apply(checkContext, params));
+      assert.deepEqual(
+        checkContext._relatedNodes.map(elm => elm.id),
+        ['duplicate']
+      );
+    });
+
+    it('uses the document scope of slotted landmarks', () => {
+      const params = checkSetup(
+        `
+        <main id="target"></main>
+        <div>
+          <template shadowrootmode="open">
+            <div role="document"><slot></slot></div>
+          </template>
+          <main></main>
+        </div>
+      `,
+        { selector: 'main' }
+      );
+      assert.isTrue(check.evaluate.apply(checkContext, params));
+      assert.lengthOf(checkContext._relatedNodes, 0);
+    });
+
+    it('uses the document scope across shadow DOM', () => {
+      const params = checkSetup(
+        `
+        <main id="target"></main>
+        <div role="document">
+          <template shadowrootmode="open"><main></main></template>
+        </div>
+      `,
+        { selector: 'main' }
+      );
+      assert.isTrue(check.evaluate.apply(checkContext, params));
+      assert.lengthOf(checkContext._relatedNodes, 0);
+    });
+  });
 });

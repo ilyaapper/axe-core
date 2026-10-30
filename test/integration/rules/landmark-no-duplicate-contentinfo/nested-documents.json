@@ -1,0 +1,6 @@
+{
+  "description": "landmark-no-duplicate-contentinfo scopes nested documents and applications",
+  "rule": "landmark-no-duplicate-contentinfo",
+  "passes": [["#pass-root"], ["#pass-document"], ["#pass-nested-document"]],
+  "violations": [["#fail-application"]]
+}

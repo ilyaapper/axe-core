@@ -1,0 +1,6 @@
+{
+  "description": "landmark-no-duplicate-main scopes nested documents and applications",
+  "rule": "landmark-no-duplicate-main",
+  "passes": [["#pass-root"], ["#pass-document"], ["#pass-nested-document"]],
+  "violations": [["#fail-application"]]
+}

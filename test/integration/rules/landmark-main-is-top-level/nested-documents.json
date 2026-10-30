@@ -1,0 +1,6 @@
+{
+  "description": "landmark-main-is-top-level scopes nested documents and applications",
+  "rule": "landmark-main-is-top-level",
+  "passes": [["#pass-root"], ["#pass-document"], ["#pass-application"]],
+  "violations": [["#fail-nested-landmark"]]
+}

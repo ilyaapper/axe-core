@@ -1,0 +1,6 @@
+{
+  "description": "landmark-no-duplicate-banner scopes nested documents and applications",
+  "rule": "landmark-no-duplicate-banner",
+  "passes": [["#pass-root"], ["#pass-document"], ["#pass-nested-document"]],
+  "violations": [["#fail-application"]]
+}

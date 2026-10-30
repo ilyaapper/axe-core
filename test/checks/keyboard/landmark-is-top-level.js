@@ -81,4 +81,60 @@ describe('landmark-is-top-level', () => {
     assert.isTrue(check.evaluate.apply(checkContext, params));
     assert.deepEqual(checkContext._data, { role: 'main' });
   });
+
+  ['document', 'application'].forEach(scopeRole => {
+    ['banner', 'contentinfo', 'main'].forEach(role => {
+      it(`allows ${role} in a nested ${scopeRole}`, () => {
+        const params = checkSetup(`
+          <main>
+            <div role="${scopeRole}">
+              <div role="${role}" id="target"></div>
+            </div>
+          </main>
+        `);
+        axe.utils.getFlattenedTree(document.documentElement);
+        assert.isTrue(check.evaluate.apply(checkContext, params));
+        assert.deepEqual(checkContext._data, { role });
+      });
+
+      it(`rejects ${role} inside a landmark within a ${scopeRole}`, () => {
+        const params = checkSetup(`
+          <div role="${scopeRole}">
+            <nav><div role="${role}" id="target"></div></nav>
+          </div>
+        `);
+        axe.utils.getFlattenedTree(document.documentElement);
+        assert.isFalse(check.evaluate.apply(checkContext, params));
+      });
+    });
+
+    it(`respects a ${scopeRole} boundary across shadow DOM`, () => {
+      const params = checkSetup(`
+        <main>
+          <div role="${scopeRole}">
+            <template shadowrootmode="open">
+              <main id="target"></main>
+            </template>
+          </div>
+        </main>
+      `);
+      axe.utils.getFlattenedTree(document.documentElement);
+      assert.isTrue(check.evaluate.apply(checkContext, params));
+    });
+
+    it(`respects a ${scopeRole} boundary for slotted landmarks`, () => {
+      const params = checkSetup(`
+        <main>
+          <div>
+            <template shadowrootmode="open">
+              <div role="${scopeRole}"><slot></slot></div>
+            </template>
+            <main id="target"></main>
+          </div>
+        </main>
+      `);
+      axe.utils.getFlattenedTree(document.documentElement);
+      assert.isTrue(check.evaluate.apply(checkContext, params));
+    });
+  });
 });
